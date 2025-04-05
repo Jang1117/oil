@@ -28,10 +28,7 @@
             const userLat = position.coords.latitude; // WGS84 위도
             const userLon = position.coords.longitude; // WGS84 경도
 
-            // WGS84 -> KATEC 변환
-            const katec = wgs84ToKatec(userLon, userLat);
             console.log('현재 위치 (WGS84):', { latitude: userLat, longitude: userLon });
-            console.log('KATEC 변환 좌표:', katec);
 
             // 지도 초기화 (5km 반경에 맞게 레벨 조정)
             const mapContainer = document.getElementById('map');
@@ -47,10 +44,10 @@
                 map: map
             });
 
-            // 오피넷 API 호출 (반경 5km)
+            // 오피넷 API 호출 (WGS84 좌표 직접 사용)
             const apiKey = 'F250405240';
             const radius = 5000; // 5km (API 최대값)
-            const baseUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${katec.x}&y=${katec.y}&radius=${radius}&sort=1&prodcd=B027&out=json`;
+            const baseUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${userLon}&y=${userLat}&radius=${radius}&sort=1&prodcd=B027&out=json`;
             const proxyUrl = `https://cors-anywhere.herokuapp.com/${baseUrl}`;
 
             fetch(proxyUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
@@ -64,7 +61,7 @@
                     const stations = data.RESULT?.OIL;
                     if (!stations || stations.length === 0) {
                         document.getElementById('result').innerHTML = "5km 내 주유소가 없습니다.";
-                        console.log('주유소 데이터 없음 - KATEC 위치:', katec);
+                        console.log('주유소 데이터 없음 - 위치:', { lat: userLat, lon: userLon });
                         return;
                     }
 
@@ -91,29 +88,6 @@
                     console.error('오피넷 API 오류:', error);
                     document.getElementById('result').innerHTML = `주유소 정보를 불러오지 못했습니다: ${error.message}`;
                 });
-        }
-
-        // WGS84 -> KATEC 변환 함수
-        function wgs84ToKatec(lon, lat) {
-            const PI = Math.PI;
-            const DEGRAD = PI / 180.0;
-            const re = 6371.00877 / 1; // 지구 반경 [km] / 격자 간격 [km]
-            const slat1 = 30.0 * DEGRAD;
-            const slat2 = 60.0 * DEGRAD;
-            const sn = Math.tan(PI * 0.25 + slat2 * 0.5) / Math.tan(PI * 0.25 + slat1 * 0.5);
-            const sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
-            const sf = Math.tan(PI * 0.25 + slat1 * 0.5);
-            const sf = Math.pow(sf, sn) * Math.cos(slat1) / sn;
-            const ro = Math.tan(PI * 0.25 + lat * DEGRAD * 0.5);
-            const ro = re * sf / Math.pow(ro, sn);
-            const ra = re * sf / Math.pow(Math.tan(PI * 0.25 + lat * DEGRAD * 0.5), sn);
-            const theta = lon * DEGRAD - (128.0 * DEGRAD);
-            if (theta > PI) theta -= 2.0 * PI;
-            if (theta < -PI) theta += 2.0 * PI;
-            theta *= sn;
-            const x = ra * Math.sin(theta) + 200000; // KATEC X
-            const y = ro - ra * Math.cos(theta) + 550000; // KATEC Y
-            return { x: x, y: y };
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
