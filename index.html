@@ -72,19 +72,22 @@
                     // 모든 주유소 정보 표시
                     let resultHtml = '<h2>검색된 주유소 목록</h2>';
                     stations.forEach(station => {
-                        const distance = calculateDistance(userLat, userLon, station.GIS_Y_COOR, station.GIS_X_COOR);
+                        // KATEC -> WGS84 변환
+                        const wgs84 = katecToWgs84(station.GIS_X_COOR, station.GIS_Y_COOR);
+                        const distance = calculateDistance(userLat, userLon, wgs84.lat, wgs84.lon);
+
                         resultHtml += `
                             <div>
                                 <p>이름: ${station.OS_NM}</p>
                                 <p>가격: ${station.PRICE}원 (휘발유)</p>
                                 <p>거리: ${distance.toFixed(2)}km</p>
-                                <p>주소: ${station.NEW_ADR || station.VAN_ADR}</p>
+                                <p>주소: ${station.NEW_ADR || station.VAN_ADR || '주소 정보 없음'}</p>
                                 <hr>
                             </div>
                         `;
 
                         new kakao.maps.Marker({
-                            position: new kakao.maps.LatLng(station.GIS_Y_COOR, station.GIS_X_COOR),
+                            position: new kakao.maps.LatLng(wgs84.lat, wgs84.lon),
                             map: map,
                             title: `${station.OS_NM} - ${station.PRICE}원`
                         });
@@ -97,7 +100,7 @@
                 });
         }
 
-        // WGS84 -> KATEC 변환 함수 (오피넷 API에 맞게 조정)
+        // WGS84 -> KATEC 변환 함수 (오피넷 API 기준)
         function wgs84ToKatec(lon, lat) {
             const PI = Math.PI;
             const DEGRAD = PI / 180.0;
@@ -114,7 +117,6 @@
             const e = Math.sqrt(2 * f - f * f); // 제1 이심률
             const e2 = e * e;
 
-            // Meridional Arc 계산
             const m1 = (1 - e2 / 4 - 3 * e2 * e2 / 64) * lat0;
             const m2 = (3 * e2 / 8 + 3 * e2 * e2 / 32) * Math.sin(2 * lat0);
             const m3 = (15 * e2 * e2 / 256) * Math.sin(4 * lat0);
@@ -136,6 +138,55 @@
             return {
                 x: x + dx,
                 y: y + dy
+            };
+        }
+
+        // KATEC -> WGS84 변환 함수
+        function katecToWgs84(x, y) {
+            const PI = Math.PI;
+            const DEGRAD = PI / 180.0;
+            const RADDEG = 180.0 / PI;
+
+            // KATEC 파라미터 (오피넷 API 기준)
+            const a = 6378137.0; // WGS84 타원체 장반경 (m)
+            const f = 1 / 298.257223563; // 편평률
+            const lon0 = 127.5 * DEGRAD; // 기준 경도 (127.5°E)
+            const lat0 = 38.0 * DEGRAD;  // 기준 위도 (38°N)
+            const k0 = 0.9996; // 축척 계수
+            const dx = 315000; // X 오프셋 (오피넷 API 기준)
+            const dy = 545000; // Y 오프셋 (오피넷 API 기준)
+
+            const e = Math.sqrt(2 * f - f * f); // 제1 이심률
+            const e2 = e * e;
+
+            const m1 = (1 - e2 / 4 - 3 * e2 * e2 / 64) * lat0;
+            const m2 = (3 * e2 / 8 + 3 * e2 * e2 / 32) * Math.sin(2 * lat0);
+            const m3 = (15 * e2 * e2 / 256) * Math.sin(4 * lat0);
+            const M0 = a * (m1 - m2 + m3);
+
+            // KATEC -> TM 좌표로 변환
+            const x_tm = (x - dx) / k0;
+            const y_tm = (y - dy) / k0;
+
+            // 초기 위도 추정
+            let lat = lat0;
+            for (let i = 0; i < 10; i++) {
+                const m = (1 - e2 / 4 - 3 * e2 * e2 / 64) * lat;
+                const m_2 = (3 * e2 / 8 + 3 * e2 * e2 / 32) * Math.sin(2 * lat);
+                const m_3 = (15 * e2 * e2 / 256) * Math.sin(4 * lat);
+                const M = a * (m - m_2 + m_3);
+                const N = a / Math.sqrt(1 - e2 * Math.sin(lat) * Math.sin(lat));
+                const T = Math.tan(lat) * Math.tan(lat);
+                const deltaM = y_tm - (M - M0) + N * Math.tan(lat) * (x_tm * x_tm / (2 * N * N));
+                lat = lat + deltaM / (N * (1 - e2 * Math.sin(lat) * Math.sin(lat)));
+            }
+
+            const N = a / Math.sqrt(1 - e2 * Math.sin(lat) * Math.sin(lat));
+            const lon = lon0 + (x_tm / (N * Math.cos(lat))) * RADDEG;
+
+            return {
+                lat: lat * RADDEG,
+                lon: lon
             };
         }
 
