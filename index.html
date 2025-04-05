@@ -28,11 +28,14 @@
             const userLat = position.coords.latitude;
             const userLon = position.coords.longitude;
 
-            // 지도 초기화 (30km 반경에 맞게 레벨 조정)
+            // 현재 위치 로그 (디버깅용)
+            console.log('현재 위치:', { latitude: userLat, longitude: userLon });
+
+            // 지도 초기화 (30km 반경에 맞게 레벨 설정)
             const mapContainer = document.getElementById('map');
             const mapOption = {
                 center: new kakao.maps.LatLng(userLat, userLon),
-                level: 8 // 30km를 보기 위해 더 넓은 범위
+                level: 8 // 30km 반경에 적합
             };
             const map = new kakao.maps.Map(mapContainer, mapOption);
 
@@ -42,7 +45,7 @@
                 map: map
             });
 
-            // 오피넷 API 호출 (반경 30km)
+            // 오피넷 API 호출
             const apiKey = 'F250405240';
             const radius = 30000; // 30km = 30000m
             const baseUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${userLon}&y=${userLat}&radius=${radius}&sort=1&prodcd=B027&out=json`;
@@ -54,14 +57,16 @@
                     return response.json();
                 })
                 .then(data => {
-                    console.log('오피넷 API 응답:', data); // 디버깅용: 전체 응답 확인
+                    console.log('오피넷 API 응답:', data); // 전체 응답 로그
+
                     const stations = data.RESULT?.OIL;
                     if (!stations || stations.length === 0) {
                         document.getElementById('result').innerHTML = "30km 내 주유소가 없습니다.";
-                        console.log('주유소 데이터 없음 - 위치:', userLat, userLon);
+                        console.log('주유소 데이터 없음 - 위치:', { lat: userLat, lon: userLon });
                         return;
                     }
 
+                    // 최저가 주유소 찾기
                     let cheapestStation = stations.reduce((prev, curr) =>
                         parseInt(prev.PRICE) < parseInt(curr.PRICE) ? prev : curr
                     );
@@ -73,9 +78,10 @@
                         <p>이름: ${cheapestStation.OS_NM}</p>
                         <p>가격: ${cheapestStation.PRICE}원 (휘발유)</p>
                         <p>거리: ${distance.toFixed(2)}km</p>
-                        <p>주소: ${cheapestStation.ADDR}</p>
+                        <p>주소: ${cheapestStation.NEW_ADR || cheapestStation.VAN_ADR}</p>
                     `;
 
+                    // 주유소 마커 추가
                     new kakao.maps.Marker({
                         position: new kakao.maps.LatLng(cheapestStation.GIS_Y_COOR, cheapestStation.GIS_X_COOR),
                         map: map
@@ -88,7 +94,7 @@
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371;
+            const R = 6371; // 지구 반지름 (km)
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLon = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -100,6 +106,7 @@
 
         function showError(error) {
             document.getElementById('result').innerHTML = "위치 정보를 가져오지 못했습니다: " + error.message;
+            console.error('Geolocation 오류:', error);
         }
     </script>
 </body>
