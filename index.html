@@ -100,7 +100,7 @@
                 });
         }
 
-        // WGS84 -> KATEC 변환 함수 (오피넷 API 기준)
+        // WGS84 -> KATEC 변환 함수 (오피넷 API 기준: UTM-K)
         function wgs84ToKatec(lon, lat) {
             const PI = Math.PI;
             const DEGRAD = PI / 180.0;
@@ -111,8 +111,8 @@
             const lon0 = 127.0 * DEGRAD; // 기준 경도 (127°E)
             const lat0 = 38.0 * DEGRAD;  // 기준 위도 (38°N)
             const k0 = 0.9996; // 축척 계수
-            const dx = 960000; // X 오프셋 (UTM-K 기준)
-            const dy = 0;      // Y 오프셋 (UTM-K 기준)
+            const dx = -645000; // X 오프셋 (오피넷 API 기준 조정)
+            const dy = 545000;  // Y 오프셋 (오피넷 API 기준 조정)
 
             const e = Math.sqrt(2 * f - f * f); // 제1 이심률
             const e2 = e * e;
@@ -153,8 +153,8 @@
             const lon0 = 127.0 * DEGRAD; // 기준 경도 (127°E)
             const lat0 = 38.0 * DEGRAD;  // 기준 위도 (38°N)
             const k0 = 0.9996; // 축척 계수
-            const dx = 960000; // X 오프셋 (UTM-K 기준)
-            const dy = 0;      // Y 오프셋 (UTM-K 기준)
+            const dx = -645000; // X 오프셋 (오피넷 API 기준 조정)
+            const dy = 545000;  // Y 오프셋 (오피넷 API 기준 조정)
 
             const e = Math.sqrt(2 * f - f * f); // 제1 이심률
             const e2 = e * e;
