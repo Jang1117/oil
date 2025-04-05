@@ -97,38 +97,38 @@
                 });
         }
 
-        // WGS84 -> KATEC 변환 함수 (정확한 공식 적용)
+        // WGS84 -> KATEC 변환 함수 (정확한 한국 KATEC 공식)
         function wgs84ToKatec(lon, lat) {
             const PI = Math.PI;
             const DEGRAD = PI / 180.0;
 
-            // KATEC 파라미터 (한국 기준)
-            const re = 6371.00877; // 지구 반경 [km]
-            const grid = 5.0; // 격자 간격 [km]
-            const slat1 = 30.0 * DEGRAD; // 표준 위도 1
-            const slat2 = 60.0 * DEGRAD; // 표준 위도 2
-            const olon = 126.0 * DEGRAD; // 기준 경도
-            const olat = 38.0 * DEGRAD;  // 기준 위도
-            const xo = 210 / grid; // X 오프셋
-            const yo = 675 / grid; // Y 오프셋
+            // KATEC 파라미터
+            const a = 6378137.0; // WGS84 타원체 장반경
+            const f = 1 / 298.257223563; // 편평률
+            const lon0 = 126.0 * DEGRAD; // 기준 경도
+            const lat0 = 38.0 * DEGRAD;  // 기준 위도
+            const k0 = 1.0; // 축척 계수
+            const dx = 200000; // X 오프셋
+            const dy = 600000; // Y 오프셋
 
-            let sn = Math.tan(PI * 0.25 + slat2 * 0.5) / Math.tan(PI * 0.25 + slat1 * 0.5);
-            sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
-            let sf = Math.tan(PI * 0.25 + slat1 * 0.5);
-            sf = Math.pow(sf, sn) * Math.cos(slat1) / sn;
-            let ro = Math.tan(PI * 0.25 + olat * 0.5);
-            ro = re * sf / Math.pow(ro, sn);
+            const e = Math.sqrt(f * (2 - f)); // 제1 이심률
+            const e2 = e * e;
+            const m1 = Math.cos(lat0) / Math.sqrt(1 - e2 * Math.sin(lat0) * Math.sin(lat0));
+            const t1 = Math.tan(PI / 4 - lat0 / 2) / Math.pow((1 - e * Math.sin(lat0)) / (1 + e * Math.sin(lat0)), e / 2);
+            const n = Math.sin(lat0);
+            const r = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(lat0) * Math.sin(lat0), 1.5);
+            const d = (lon - lon0) * Math.cos(lat0);
 
-            let ra = Math.tan(PI * 0.25 + lat * DEGRAD * 0.5);
-            ra = re * sf / Math.pow(ra, sn);
-            let theta = lon * DEGRAD - olon;
-            if (theta > PI) theta -= 2.0 * PI;
-            if (theta < -PI) theta += 2.0 * PI;
-            theta *= sn;
+            const m = Math.cos(lat * DEGRAD) / Math.sqrt(1 - e2 * Math.sin(lat * DEGRAD) * Math.sin(lat * DEGRAD));
+            const t = Math.tan(PI / 4 - lat * DEGRAD / 2) / Math.pow((1 - e * Math.sin(lat * DEGRAD)) / (1 + e * Math.sin(lat * DEGRAD)), e / 2);
+            const rho = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(lat * DEGRAD) * Math.sin(lat * DEGRAD), 1.5);
+            const x = k0 * rho * d;
+            const y = k0 * (r * Math.log(t1 / t) / m1);
 
-            const x = ra * Math.sin(theta) + xo;
-            const y = ro - ra * Math.cos(theta) + yo;
-            return { x: x * 1000, y: y * 1000 }; // 미터 단위로 변환
+            return {
+                x: x + dx,
+                y: y + dy
+            };
         }
 
         function calculateDistance(lat1, lon1, lat2, lon2) {
