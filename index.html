@@ -105,14 +105,14 @@
             const PI = Math.PI;
             const DEGRAD = PI / 180.0;
 
-            // KATEC 파라미터 (오피넷 API 기준)
+            // UTM-K 파라미터 (오피넷 API 좌표계 기준)
             const a = 6378137.0; // WGS84 타원체 장반경 (m)
             const f = 1 / 298.257223563; // 편평률
-            const lon0 = 127.5 * DEGRAD; // 기준 경도 (127.5°E)
+            const lon0 = 127.0 * DEGRAD; // 기준 경도 (127°E)
             const lat0 = 38.0 * DEGRAD;  // 기준 위도 (38°N)
             const k0 = 0.9996; // 축척 계수
-            const dx = 315000; // X 오프셋 (오피넷 API 기준)
-            const dy = 545000; // Y 오프셋 (오피넷 API 기준)
+            const dx = 960000; // X 오프셋 (UTM-K 기준)
+            const dy = 0;      // Y 오프셋 (UTM-K 기준)
 
             const e = Math.sqrt(2 * f - f * f); // 제1 이심률
             const e2 = e * e;
@@ -141,20 +141,20 @@
             };
         }
 
-        // KATEC -> WGS84 변환 함수
+        // KATEC -> WGS84 변환 함수 (UTM-K 기준)
         function katecToWgs84(x, y) {
             const PI = Math.PI;
             const DEGRAD = PI / 180.0;
             const RADDEG = 180.0 / PI;
 
-            // KATEC 파라미터 (오피넷 API 기준)
+            // UTM-K 파라미터
             const a = 6378137.0; // WGS84 타원체 장반경 (m)
             const f = 1 / 298.257223563; // 편평률
-            const lon0 = 127.5 * DEGRAD; // 기준 경도 (127.5°E)
+            const lon0 = 127.0 * DEGRAD; // 기준 경도 (127°E)
             const lat0 = 38.0 * DEGRAD;  // 기준 위도 (38°N)
             const k0 = 0.9996; // 축척 계수
-            const dx = 315000; // X 오프셋 (오피넷 API 기준)
-            const dy = 545000; // Y 오프셋 (오피넷 API 기준)
+            const dx = 960000; // X 오프셋 (UTM-K 기준)
+            const dy = 0;      // Y 오프셋 (UTM-K 기준)
 
             const e = Math.sqrt(2 * f - f * f); // 제1 이심률
             const e2 = e * e;
@@ -164,7 +164,7 @@
             const m3 = (15 * e2 * e2 / 256) * Math.sin(4 * lat0);
             const M0 = a * (m1 - m2 + m3);
 
-            // KATEC -> TM 좌표로 변환
+            // UTM-K -> TM 좌표로 변환
             const x_tm = (x - dx) / k0;
             const y_tm = (y - dy) / k0;
 
@@ -176,7 +176,6 @@
                 const m_3 = (15 * e2 * e2 / 256) * Math.sin(4 * lat);
                 const M = a * (m - m_2 + m_3);
                 const N = a / Math.sqrt(1 - e2 * Math.sin(lat) * Math.sin(lat));
-                const T = Math.tan(lat) * Math.tan(lat);
                 const deltaM = y_tm - (M - M0) + N * Math.tan(lat) * (x_tm * x_tm / (2 * N * N));
                 lat = lat + deltaM / (N * (1 - e2 * Math.sin(lat) * Math.sin(lat)));
             }
