@@ -9,7 +9,7 @@
     </style>
 </head>
 <body>
-    <h1>내 주변 5km 최저가 주유소</h1>
+    <h1>내 주변 10km 최저가 주유소</h1>
     <div id="map"></div>
     <div id="result"></div>
 
@@ -32,7 +32,7 @@
             const mapContainer = document.getElementById('map');
             const mapOption = {
                 center: new kakao.maps.LatLng(userLat, userLon),
-                level: 5
+                level: 6 // 10km 반경을 보기 위해 확대 레벨 조정
             };
             const map = new kakao.maps.Map(mapContainer, mapOption);
 
@@ -42,21 +42,22 @@
                 map: map
             });
 
-            // 오피넷 API 호출 (CORS 프록시 사용)
+            // 오피넷 API 호출 (반경 10km)
             const apiKey = 'F250405240';
-            const radius = 5000;
+            const radius = 10000; // 10km = 10000m
             const baseUrl = `http://www.opinet.co.kr/api/aroundAll.do?code=${apiKey}&x=${userLon}&y=${userLat}&radius=${radius}&sort=1&prodcd=B027&out=json`;
             const proxyUrl = `https://cors-anywhere.herokuapp.com/${baseUrl}`;
 
-            fetch(proxyUrl)
+            fetch(proxyUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(response => {
                     if (!response.ok) throw new Error(`HTTP 오류: ${response.status}`);
                     return response.json();
                 })
                 .then(data => {
+                    console.log('오피넷 API 응답:', data); // 디버깅용
                     const stations = data.RESULT?.OIL;
                     if (!stations || stations.length === 0) {
-                        document.getElementById('result').innerHTML = "5km 내 주유소가 없습니다.";
+                        document.getElementById('result').innerHTML = "10km 내 주유소가 없습니다.";
                         return;
                     }
 
